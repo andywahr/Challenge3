@@ -21,6 +21,11 @@ namespace Functions
             {
                 c.BaseAddress = new Uri("https://serverlessohuser.trafficmanager.net");
             });
+
+            builder.Services.AddHttpClient("Management", c =>
+            {
+                c.BaseAddress = new Uri("https://serverlessohmanagementapi.trafficmanager.net");
+            });
         }
     }
 }

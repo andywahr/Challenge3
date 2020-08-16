@@ -1,11 +1,19 @@
 {
-    "version": "2.0",
-    "logging": {
-        "applicationInsights": {
-            "samplingExcludedTypes": "Request",
-            "samplingSettings": {
-                "isEnabled": true
-            }
-        }
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingExcludedTypes": "Request",
+      "samplingSettings": {
+        "isEnabled": true
+      }
     }
+  },
+  "extensions": {
+    "eventHubs": {
+      "eventProcessorOptions": {
+        "maxBatchSize": 64,
+        "prefetchCount": 256
+      }
+    }
+  }
 }
