@@ -10,6 +10,9 @@ using Newtonsoft.Json;
 using System.Net.Http;
 using System.Web.Http;
 using Microsoft.Azure.Documents.SystemFunctions;
+using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Functions
 {
@@ -62,9 +65,51 @@ namespace Functions
 
             var newRating = new CreateRatingResponse(data);
 
+// start of Challenge 9
+
+            if (!string.IsNullOrEmpty(newRating.userNotes))
+            {
+                var sentinmentApi = _httpClientFactory.CreateClient("TextAnalysis");
+                string sentimentRequest = $@"{{
+  ""documents"": [
+    {{
+      ""language"": ""en"",
+      ""id"": ""{newRating.id}"",
+      ""text"": ""{newRating.userNotes}""
+    }}
+  ]
+}}";
+                var sentimentAPIResponse = await sentinmentApi.PostAsync("/text/analytics/v3.0/sentiment", new StringContent(sentimentRequest, System.Text.Encoding.UTF8, "application/json"));
+                SentimentResponse sentimentResponse = JsonConvert.DeserializeObject<SentimentResponse>(await sentimentAPIResponse.Content.ReadAsStringAsync());
+
+                newRating.sentimentScore = sentimentResponse.documents.FirstOrDefault().sentiment ?? "unknown";
+            }
+            else
+            {
+                newRating.sentimentScore = "unknown";
+            }
+
+
+            if ( string.Equals(newRating.sentimentScore, "negative", StringComparison.OrdinalIgnoreCase))
+            {
+                log.LogInformation($"NEGATIVE USER NOTE: {newRating.userNotes}");
+            }
+// end of challenge 9
+
             await ratings.AddAsync(newRating);
 
             return new OkObjectResult(newRating);
         }
+    }
+
+    public class SentimentResponse
+    {
+        public IEnumerable<Sentiment> documents { get; set; }
+    }
+
+    public class Sentiment
+    {
+        public string id { get; set; }
+        public string sentiment { get; set; }
     }
 }

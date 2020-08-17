@@ -31,5 +31,6 @@ namespace Functions
 
         public string id { get; set; } = Guid.NewGuid().ToString();
         public DateTimeOffset timestamp { get; set; } = DateTimeOffset.UtcNow;
+        public string sentimentScore { get; set; } // challenge 9
     }
 }

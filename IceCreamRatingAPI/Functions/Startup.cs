@@ -1,4 +1,5 @@
 ﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,8 @@ namespace Functions
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
+            var config = new ConfigurationBuilder().AddJsonFile("local.settings.json", true).AddEnvironmentVariables().Build();
+
             builder.Services.AddHttpClient("Products", c =>
             {
                 c.BaseAddress = new Uri("https://serverlessohproduct.trafficmanager.net");
@@ -25,6 +28,11 @@ namespace Functions
             builder.Services.AddHttpClient("Management", c =>
             {
                 c.BaseAddress = new Uri("https://serverlessohmanagementapi.trafficmanager.net");
+            });
+            builder.Services.AddHttpClient("TextAnalysis", c =>
+            {
+                c.BaseAddress = new Uri("https://andywahr-serverless.cognitiveservices.azure.com");
+                c.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", config["Challenge9SentimentKey"]);
             });
         }
     }
