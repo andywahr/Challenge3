@@ -25,7 +25,7 @@ namespace Functions
 
         [FunctionName("CombineOrder")]
         public async Task CombineOrder([OrchestrationTrigger] IDurableOrchestrationContext context,
-                                      [CosmosDB(databaseName: "IceCream", collectionName: "Orders", ConnectionStringSetting = "CosmosDBConnection")] IAsyncCollector<OrderInfo> orders,
+                                       [CosmosDB(databaseName: "IceCream", collectionName: "Orders", ConnectionStringSetting = "CosmosDBConnection")] IAsyncCollector<OrderInfo> orders,
                                        ILogger log)
         {
             string orderid = context.InstanceId;
@@ -97,7 +97,18 @@ string message = @$"{{
                     var retval = await starter.StartNewAsync(@"CombineOrder", id);
                 }
 
-                await starter.RaiseEventAsync(id, fileName, myBlob.Uri.ToString());
+                //Set the expiry time and permissions for the blob.
+                //In this case the start time is specified as a few minutes in the past, to mitigate clock skew.
+                //The shared access signature will be valid immediately.
+                SharedAccessBlobPolicy sasConstraints = new SharedAccessBlobPolicy();
+                sasConstraints.SharedAccessStartTime = DateTime.UtcNow.AddMinutes(-5);
+                sasConstraints.SharedAccessExpiryTime = DateTime.UtcNow.AddHours(24);
+                sasConstraints.Permissions = SharedAccessBlobPermissions.Read;
+
+                //Generate the shared access signature on the blob, setting the constraints directly on the signature.
+                string sasBlobToken = myBlob.GetSharedAccessSignature(sasConstraints);
+
+                await starter.RaiseEventAsync(id, fileName, myBlob.Uri.ToString() + sasBlobToken);
             }
         }
     }

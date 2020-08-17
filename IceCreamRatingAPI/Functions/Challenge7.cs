@@ -5,7 +5,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -14,7 +16,8 @@ namespace Functions
     public static class Challenge7
     {
         [FunctionName("Challenge7")]
-        public static async Task Run([EventHubTrigger("challenge7", Connection = "Challenge7EventHub")] EventData[] events,
+        [return: ServiceBus("receipts", Connection = "Challenge8ServiceBus", EntityType = EntityType.Topic)] // added Challenge 8
+        public static async Task<Message> Run([EventHubTrigger("challenge7", Connection = "Challenge7EventHub")] EventData[] events,
                                      [CosmosDB(databaseName: "IceCream", collectionName: "SalesEvents", ConnectionStringSetting = "CosmosDBConnection")] IAsyncCollector<SalesEvent> salesEvents,
                                      ILogger log)
 
@@ -26,11 +29,13 @@ namespace Functions
                 try
                 {
                     string messageBody = Encoding.UTF8.GetString(eventData.Body.Array, eventData.Body.Offset, eventData.Body.Count);
+                    SalesEvent salesEvent = Newtonsoft.Json.JsonConvert.DeserializeObject<SalesEvent>(messageBody);
 
-                    await salesEvents.AddAsync(Newtonsoft.Json.JsonConvert.DeserializeObject<SalesEvent>(messageBody));
-                    // Replace these two lines with your processing logic.
-                    log.LogInformation($"C# Event Hub trigger function processed a message: {messageBody}");
-                    await Task.Yield();
+                    Message msg = new Message(eventData.Body.Array); // added Challenge 8
+                    msg.UserProperties.Add("totalcost", salesEvent.SalesLineItems.Sum(i => i.totalcost)); // added Challenge 8
+
+                    await salesEvents.AddAsync(salesEvent);
+                    return msg; // added Challenge 8
                 }
                 catch (Exception e)
                 {
@@ -47,6 +52,8 @@ namespace Functions
 
             if (exceptions.Count == 1)
                 throw exceptions.Single();
+
+            return null;
         }
     }
 }
